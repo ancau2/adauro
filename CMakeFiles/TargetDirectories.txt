@@ -1,0 +1,1 @@
+/home/cloud/Adauro/adauro/CMakeFiles/VideoTool.dir
