@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/cloud/adauro/adauro/VideoTool.cpp
+/home/cloud/Music/adauro/VideoTool.cpp
 sstream
 -
 string
@@ -14,9 +14,9 @@ string
 iostream
 -
 opencv2/highgui/highgui.hpp
-/home/cloud/adauro/adauro/opencv2/highgui/highgui.hpp
+/home/cloud/Music/adauro/opencv2/highgui/highgui.hpp
 opencv2/opencv.hpp
-/home/cloud/adauro/adauro/opencv2/opencv.hpp
+/home/cloud/Music/adauro/opencv2/opencv.hpp
 stdio.h
 -
 sys/socket.h

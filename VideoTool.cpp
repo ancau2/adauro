@@ -41,7 +41,6 @@ const std::string trackbarWindowName = "Trackbars";
 
 
 
-
 void on_mouse(int e, int x, int y, int d, void *ptr)
 {
 	if (e == EVENT_LBUTTONDOWN)
@@ -188,7 +187,7 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 }
 
 
-int move(char string[])
+int move(char string[],float delay)
 {
     struct sockaddr_in address;
     int sock = 0, valread;
@@ -202,7 +201,7 @@ int move(char string[])
     }
   
     memset(&serv_addr, '0', sizeof(serv_addr));
-  
+
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
       
@@ -218,34 +217,34 @@ int move(char string[])
         printf("\nConnection Failed \n");
         return -1;
     }
-	
-	
 	char cmd[2];
-
-    
-
-		for(int i = 0; i < strlen(string); ++i)
+	for(int i = 0; i < strlen(string); ++i)
 			if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
 				continue;
 			else{
 				sprintf(cmd, "%c", string[i]);
 				send(sock , cmd, strlen(cmd), 0 );
-				sleep(1);
+				sleep(delay);
 			}
-    
     return 0;
 }
+int oldx,oldy,oldxeu,oldyeu,enable;
+void strategie(int x,int y,int xeu,int yeu){
+		
+	float m=abs((float)(yeu-y)/(xeu-x));
+	n=y-m*x
+	move("f",0.3);
+	
+}
+
+
 
 int main(int argc, char* argv[])
 {
-
 	//some boolean variables for different functionality within this
 	//program
-	/*bool trackObjects = true;
+	bool trackObjects = true;
 	bool useMorphOps = true;
-
-
-
 	Point p;
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed;
@@ -255,8 +254,9 @@ int main(int argc, char* argv[])
 	Mat threshold;
 	//x and y values for the location of the object
 	int x = 0, y = 0;
+	int xeu=0,yeu=0;
 	//create slider bars for HSV filtering
-	createTrackbars();
+	//createTrackbars();
 	//video capture object to acquire webcam feed
 	VideoCapture capture;
 	//open capture object at location zero (default location for webcam)
@@ -266,21 +266,16 @@ int main(int argc, char* argv[])
 	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
-
-
-
-	
+	directie();
 	while (1) {
-
-	
 		//store image to matrix
-		capture.read(cameraFeed);
+		ca pture.read(cameraFeed);
 		if(!cameraFeed.empty()){
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 			//filter HSV image between values and store filtered image to
 			//threshold matrix
-			inRange(HSV, Scalar(171, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+			inRange(HSV, Scalar(168, 60, 70), Scalar(H_MAX, S_MAX, V_MAX), threshold);
 			//perform morphological operations on thresholded image to eliminate noise
 			//and emphasize the filtered object(s)
 			if (useMorphOps)
@@ -291,12 +286,17 @@ int main(int argc, char* argv[])
 			if (trackObjects){
 				trackFilteredObject(x, y, threshold, cameraFeed);
 			}
-			inRange(HSV, Scalar(H_MIN, 172, 16), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+			//x si y coordonate  le  gfusyd
+			xeu=x;
+			yeu=y;
+			inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
 			if (useMorphOps)
 				morphOps(threshold);
 			if (trackObjects){
 				trackFilteredObject(x, y, threshold, cameraFeed);
 			}
+			
+			//strategie(x,y,xeu,yeu);
 			//show frames
 			imshow(windowName2, threshold);
 			imshow(windowName, cameraFeed);
@@ -307,10 +307,10 @@ int main(int argc, char* argv[])
 			waitKey(30);
 		}
 	}
-//168 255 0 0 0 0
-//0 106 119 256 153 238
-*/
-	move(argv[1]);
+//168 256 60 256 70 256 ROZ
+//0 91 79 256 223 256 GALBEN
+
+	//move(argv[1]);
 	return 0;
 }
 
