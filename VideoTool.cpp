@@ -1,9 +1,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
-//#include <opencv2\highgui.h>
 #include "opencv2/highgui/highgui.hpp"
-//#include <opencv2\cv.h>
 #include "opencv2/opencv.hpp"
 #include <stdio.h>
 #include <sys/socket.h>
@@ -12,8 +10,10 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <math.h>
+#define PI 3.1415
 #define PORT 20232
-
+#define TIMProtirepentru360 2.25
 using namespace std;
 using namespace cv;
 //initial min and max HSV filter values.
@@ -28,26 +28,17 @@ int V_MAX = 256;
 const int FRAME_WIDTH = 640;
 const int FRAME_HEIGHT = 480;
 //max number of objects to be detected in frame
-const int MAX_NUM_OBJECTS = 50;
 //minimum and maximum object area
 const int MIN_OBJECT_AREA = 20 * 20;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 //names that will appear at the top of each window
 const std::string windowName = "Original Image";
-const std::string windowName1 = "HSV Image";
 const std::string windowName2 = "Thresholded Image";
-const std::string windowName3 = "After Morphological Operations";
 const std::string trackbarWindowName = "Trackbars";
 
 
 
-void on_mouse(int e, int x, int y, int d, void *ptr)
-{
-	if (e == EVENT_LBUTTONDOWN)
-	{
-		cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-}
+
 
 void on_trackbar(int, void*)
 {//This function gets called whenever a
@@ -61,7 +52,7 @@ string intToString(int number) {
 	ss << number;
 	return ss.str();
 }
-
+//DE SCOS
 void createTrackbars() {
 	//create window for trackbars
 
@@ -89,6 +80,7 @@ void createTrackbars() {
 
 
 }
+
 void drawObject(int x, int y, Mat &frame) {
 
 	//use some of the openCV drawing functions to draw crosshairs
@@ -136,9 +128,11 @@ void morphOps(Mat &thresh) {
 
 }
 void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
-
+	//*de scos
 	Mat temp;
 	threshold.copyTo(temp);
+	//*//
+
 	//these two vectors needed for output of findContours
 	vector< vector<Point> > contours;
 	vector<Vec4i> hierarchy;
@@ -151,7 +145,7 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 	if (hierarchy.size() > 0) {
 		int numObjects = hierarchy.size();
 		//if number of objects greater than MAX_NUM_OBJECTS we have a noisy filter
-		if (numObjects < MAX_NUM_OBJECTS) {
+		if (numObjects < 10) {
 			for (int index = 0; index >= 0; index = hierarchy[index][0]) {
 
 				Moments moment = moments((cv::Mat)contours[index]);
@@ -228,16 +222,86 @@ int move(char string[],float delay)
 			}
     return 0;
 }
-int oldx,oldy,oldxeu,oldyeu,enable;
-void strategie(int x,int y,int xeu,int yeu){
-		
-	float m=abs((float)(yeu-y)/(xeu-x));
-	n=y-m*x
-	move("f",0.3);
-	
+
+float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, float y, float eroare){
+	// xOld, yOld - coordonatele de la pasul anterior al robotului nostru
+	// xNew, yNew - coordonatele de la pasul curent al robotului nostru
+	// x, y - coordonatele de la pasul curent al celuilalt robot
+
+	float unghi1, unghi2, unghi;
+
+	if (yOld - eroare <= yNew && yNew <= yOld + eroare){
+		// miscare pe verticala
+		if (xOld < xNew){
+			unghi1 = 270.0;
+		}
+		else{
+			unghi1 = 90.0;
+		}
+	}
+	else if (xOld - eroare <= xNew && xNew <= xOld + eroare){
+		// miscare pe orizontala
+		if (yOld < yNew){
+			unghi1 = 0.0;
+		}
+		else{
+			unghi1 = 180.0;
+		}
+	}
+	else{
+		// miscare oblica
+		unghi1 = atan2(yNew - yOld, xOld - xNew) / PI * 180.0;
+	}
+
+	if (yNew - eroare <= y && y <= yNew + eroare){
+		// miscare pe verticala
+		if (xNew < x){
+			unghi2 = 270.0;
+		}
+		else{
+			unghi2 = 90.0;
+		}
+	}
+	else if (xNew - eroare <= x && x <= xNew + eroare){
+		// miscare pe orizontala
+		if (yNew < y){
+			unghi2 = 0.0;
+		}
+		else{
+			unghi2 = 180.0;
+		}
+	}
+	else{
+		// miscare oblica
+		unghi2 = atan2(y - yNew, xNew - x) / PI * 180.0;
+	}
+
+
+	// DE STERS DUPA TESTARE !!!
+	printf("unghi_1 = %f ; unghi_2 = %f\n", unghi1, unghi2);
+
+	unghi =  unghi2 - unghi1;
+
+	if (unghi < -180.0){
+		return unghi + 360.0;
+	}
+	else if (unghi > 180.0){
+		return unghi - 360.0;
+	}
+	return unghi;
 }
 
+void move(char dir, float unghi){
+	if (dir == 'l'){
+		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi,(unghi*TIMProtirepentru360)/360);
+	}
+	else if (dir == 'r'){
+		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi,(unghi*TIMProtirepentru360)/360);
+	}
 
+	// apoi se misca in fata x ms
+	printf("Se deplaseaza in fata\n\n");
+}
 
 int main(int argc, char* argv[])
 {
@@ -245,7 +309,7 @@ int main(int argc, char* argv[])
 	//program
 	bool trackObjects = true;
 	bool useMorphOps = true;
-	Point p;
+	//Point p;
 	//Matrix to store each frame of the webcam feed
 	Mat cameraFeed;
 	//matrix storage for HSV image
@@ -256,26 +320,31 @@ int main(int argc, char* argv[])
 	int x = 0, y = 0;
 	int xeu=0,yeu=0;
 	//create slider bars for HSV filtering
-	//createTrackbars();
+	createTrackbars();
 	//video capture object to acquire webcam feed
 	VideoCapture capture;
+
 	//open capture object at location zero (default location for webcam)
-	capture.open("rtmp://172.16.254.99/live/nimic");
+//!!!!//capture.open("rtmp://172.16.254.99/live/nimic");
+	// open the default camera, use something different from 0 otherwise;
+    // Check VideoCapture documentation.
+    if(!capture.open(0))
+        return 0;
 	//set height and width of capture frame
-	capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-	capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+	//capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+	//capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
-	directie();
+	//directie();
 	while (1) {
 		//store image to matrix
-		ca pture.read(cameraFeed);
+		capture.read(cameraFeed);
 		if(!cameraFeed.empty()){
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 			//filter HSV image between values and store filtered image to
 			//threshold matrix
-			inRange(HSV, Scalar(168, 60, 70), Scalar(H_MAX, S_MAX, V_MAX), threshold);
+			inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
 			//perform morphological operations on thresholded image to eliminate noise
 			//and emphasize the filtered object(s)
 			if (useMorphOps)
@@ -289,19 +358,18 @@ int main(int argc, char* argv[])
 			//x si y coordonate  le  gfusyd
 			xeu=x;
 			yeu=y;
-			inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
+			/*inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
 			if (useMorphOps)
 				morphOps(threshold);
 			if (trackObjects){
 				trackFilteredObject(x, y, threshold, cameraFeed);
-			}
+			}*/
 			
 			//strategie(x,y,xeu,yeu);
 			//show frames
 			imshow(windowName2, threshold);
 			imshow(windowName, cameraFeed);
 			//imshow(windowName1, HSV);
-			setMouseCallback("Original Image", on_mouse, &p);
 			//delay 30ms so that screen can refresh.
 			//image will not appear without this waitKey() command
 			waitKey(30);

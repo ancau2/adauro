@@ -1,1 +1,3 @@
-/home/cloud/Music/adauro/CMakeFiles/VideoTool.dir
+/Users/adrian/Documents/Arduino/opencv/adauro/CMakeFiles/rebuild_cache.dir
+/Users/adrian/Documents/Arduino/opencv/adauro/CMakeFiles/edit_cache.dir
+/Users/adrian/Documents/Arduino/opencv/adauro/CMakeFiles/VideoTool.dir
