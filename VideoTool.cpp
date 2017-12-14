@@ -14,8 +14,10 @@
 #define PI 3.1415
 #define PORT 20232
 #define TIMProtirepentru360 2.25
+
 using namespace std;
 using namespace cv;
+float TIMProtirepentru1grad=TIMProtirepentru360/360
 //initial min and max HSV filter values.
 //these will be changed using trackbars
 int H_MIN = 0;
@@ -32,32 +34,20 @@ const int FRAME_HEIGHT = 480;
 const int MIN_OBJECT_AREA = 20 * 20;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 //names that will appear at the top of each window
-const std::string windowName = "Original Image";
-const std::string windowName2 = "Thresholded Image";
-const std::string trackbarWindowName = "Trackbars";
-
-
-
-
 
 void on_trackbar(int, void*)
 {//This function gets called whenever a
  // trackbar position is changed
 }
-
 string intToString(int number) {
-
-
 	std::stringstream ss;
 	ss << number;
 	return ss.str();
 }
-//DE SCOS
+//!!!!!!!!!!!!!!!!!!!DE SCOS
 void createTrackbars() {
 	//create window for trackbars
-
-
-	namedWindow(trackbarWindowName, 0);
+	namedWindow("Trackbars", 0);
 	//create memory to store trackbar name on window
 	char TrackbarName[50];
 	sprintf(TrackbarName, "H_MIN", H_MIN);
@@ -71,25 +61,15 @@ void createTrackbars() {
 	//the max value the trackbar can move (eg. H_HIGH),
 	//and the function that is called whenever the trackbar is moved(eg. on_trackbar)
 	//                                  ---->    ---->     ---->
-	createTrackbar("H_MIN", trackbarWindowName, &H_MIN, H_MAX, on_trackbar);
-	createTrackbar("H_MAX", trackbarWindowName, &H_MAX, H_MAX, on_trackbar);
-	createTrackbar("S_MIN", trackbarWindowName, &S_MIN, S_MAX, on_trackbar);
-	createTrackbar("S_MAX", trackbarWindowName, &S_MAX, S_MAX, on_trackbar);
-	createTrackbar("V_MIN", trackbarWindowName, &V_MIN, V_MAX, on_trackbar);
-	createTrackbar("V_MAX", trackbarWindowName, &V_MAX, V_MAX, on_trackbar);
-
-
+	createTrackbar("H_MIN", "Trackbars", &H_MIN, H_MAX, on_trackbar);
+	createTrackbar("H_MAX", "Trackbars", &H_MAX, H_MAX, on_trackbar);
+	createTrackbar("S_MIN", "Trackbars", &S_MIN, S_MAX, on_trackbar);
+	createTrackbar("S_MAX", "Trackbars", &S_MAX, S_MAX, on_trackbar);
+	createTrackbar("V_MIN", "Trackbars", &V_MIN, V_MAX, on_trackbar);
+	createTrackbar("V_MAX", "Trackbars", &V_MAX, V_MAX, on_trackbar);
 }
-
 void drawObject(int x, int y, Mat &frame) {
-
-	//use some of the openCV drawing functions to draw crosshairs
-	//on your tracked image!
-
-	//UPDATE:JUNE 18TH, 2013
-	//added 'if' and 'else' statements to prevent
-	//memory errors from writing off the screen (ie. (-25,-25) is not within the window!)
-
+	//use some of the openCV drawing functions to draw crosshairs on your tracked image!
 	circle(frame, Point(x, y), 20, Scalar(0, 255, 0), 2);
 	if (y - 25 > 0)
 		line(frame, Point(x, y), Point(x, y - 25), Scalar(0, 255, 0), 2);
@@ -105,7 +85,6 @@ void drawObject(int x, int y, Mat &frame) {
 	else line(frame, Point(x, y), Point(FRAME_WIDTH, y), Scalar(0, 255, 0), 2);
 
 	putText(frame, intToString(x) + "," + intToString(y), Point(x, y + 30), 1, 1, Scalar(0, 255, 0), 2);
-	//cout << "x,y: " << x << ", " << y;
 
 }
 void morphOps(Mat &thresh) {
@@ -120,15 +99,12 @@ void morphOps(Mat &thresh) {
 	erode(thresh, thresh, erodeElement);
 	erode(thresh, thresh, erodeElement);
 
-
 	dilate(thresh, thresh, dilateElement);
 	dilate(thresh, thresh, dilateElement);
-
-
 
 }
 void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
-	//*de scos
+	//*!!!!!!de scos
 	Mat temp;
 	threshold.copyTo(temp);
 	//*//
@@ -164,7 +140,7 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 				else objectFound = false;
 
 
-			}
+			}//si asta e de scos
 			//let user know you found an object
 			if (objectFound == true) {
 				putText(cameraFeed, "Tracking Object", Point(0, 50), 2, 1, Scalar(0, 255, 0), 2);
@@ -173,21 +149,15 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 				drawObject(x, y, cameraFeed);
 
 			}
-
-
 		}
 		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
 }
-
-
-int move(char string[],float delay)
+int connect()
 {
     struct sockaddr_in address;
     int sock = 0, valread;
     struct sockaddr_in serv_addr;
-    //char hello[256] =argv[1];
-    //char buffer[1024] = {0};
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("\n Socket creation error \n");
@@ -211,16 +181,7 @@ int move(char string[],float delay)
         printf("\nConnection Failed \n");
         return -1;
     }
-	char cmd[2];
-	for(int i = 0; i < strlen(string); ++i)
-			if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
-				continue;
-			else{
-				sprintf(cmd, "%c", string[i]);
-				send(sock , cmd, strlen(cmd), 0 );
-				sleep(delay);
-			}
-    return 0;
+    return sock;
 }
 
 float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, float y, float eroare){
@@ -276,12 +237,9 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 		unghi2 = atan2(y - yNew, xNew - x) / PI * 180.0;
 	}
 
-
 	// DE STERS DUPA TESTARE !!!
 	printf("unghi_1 = %f ; unghi_2 = %f\n", unghi1, unghi2);
-
 	unghi =  unghi2 - unghi1;
-
 	if (unghi < -180.0){
 		return unghi + 360.0;
 	}
@@ -291,18 +249,33 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 	return unghi;
 }
 
-void move(char dir, float unghi){
+void directie(char dir, float unghi){
 	if (dir == 'l'){
-		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi,(unghi*TIMProtirepentru360)/360);
+		//viraj stanga apoi fata
+		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi,unghi*TIMProtirepentru1grad);
 	}
-	else if (dir == 'r'){
+	if (dir == 'r'){
+		//viraj dreapta apoi fata
 		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi,(unghi*TIMProtirepentru360)/360);
 	}
-
-	// apoi se misca in fata x ms
-	printf("Se deplaseaza in fata\n\n");
+	if (dir == 'x'){
+		// apoi se misca in fata x ms
+		printf("Se deplaseaza in fata\n\n");
+	}
 }
-
+//functia care comanda deplasare pt un anumit timp
+void move(char string[],float delay){
+	char cmd[2];
+	for(int i = 0; i < strlen(string); ++i){
+		if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
+			continue;
+		else{
+			sprintf(cmd, "%c", string[i]);
+			send(sock , cmd, strlen(cmd), 0 );
+			sleep(delay);
+		}
+	}
+}
 int main(int argc, char* argv[])
 {
 	//some boolean variables for different functionality within this
@@ -318,16 +291,16 @@ int main(int argc, char* argv[])
 	Mat threshold;
 	//x and y values for the location of the object
 	int x = 0, y = 0;
-	int xeu=0,yeu=0;
+	int xeu=0,yeu= 0;
+	int xOld=0,yOld=0;
 	//create slider bars for HSV filtering
 	createTrackbars();
 	//video capture object to acquire webcam feed
 	VideoCapture capture;
 
 	//open capture object at location zero (default location for webcam)
-//!!!!//capture.open("rtmp://172.16.254.99/live/nimic");
+	capture.open("rtmp://172.16.254.99/live/nimic");
 	// open the default camera, use something different from 0 otherwise;
-    // Check VideoCapture documentation.
     if(!capture.open(0))
         return 0;
 	//set height and width of capture frame
@@ -335,7 +308,7 @@ int main(int argc, char* argv[])
 	//capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 	//start an infinite loop where webcam feed is copied to cameraFeed matrix
 	//all of our operations will be performed within this loop
-	//directie();
+	connect();
 	while (1) {
 		//store image to matrix
 		capture.read(cameraFeed);
@@ -344,6 +317,10 @@ int main(int argc, char* argv[])
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
 			//filter HSV image between values and store filtered image to
 			//threshold matrix
+			
+			//168 256 60 256 70 256 ROZ
+			//0 91 79 256 223 256 GALBEN
+
 			inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
 			//perform morphological operations on thresholded image to eliminate noise
 			//and emphasize the filtered object(s)
@@ -355,28 +332,27 @@ int main(int argc, char* argv[])
 			if (trackObjects){
 				trackFilteredObject(x, y, threshold, cameraFeed);
 			}
-			//x si y coordonate  le  gfusyd
+			//x si y coordonatele
 			xeu=x;
 			yeu=y;
-			/*inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
+			inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
 			if (useMorphOps)
 				morphOps(threshold);
 			if (trackObjects){
 				trackFilteredObject(x, y, threshold, cameraFeed);
-			}*/
-			
-			//strategie(x,y,xeu,yeu);
+			}
+			calculeazaUnghi(xOld,yOld,xeu,yeu,x,y,eroare);
 			//show frames
-			imshow(windowName2, threshold);
-			imshow(windowName, cameraFeed);
+			imshow("threshold", threshold);
+			imshow("FEED", cameraFeed);
 			//imshow(windowName1, HSV);
 			//delay 30ms so that screen can refresh.
 			//image will not appear without this waitKey() command
 			waitKey(30);
+			xOld=xeu;
+			yOld=yeu;
 		}
 	}
-//168 256 60 256 70 256 ROZ
-//0 91 79 256 223 256 GALBEN
 
 	//move(argv[1]);
 	return 0;
