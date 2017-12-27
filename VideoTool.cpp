@@ -11,13 +11,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <math.h>
+
 #define PI 3.1415
 #define PORT 20232
 #define TIMProtirepentru360 2.25
 
 using namespace std;
 using namespace cv;
-float TIMProtirepentru1grad=TIMProtirepentru360/360
+
+float TIMProtirepentru1grad=TIMProtirepentru360/360;
+
 //initial min and max HSV filter values.
 //these will be changed using trackbars
 int H_MIN = 0;
@@ -35,6 +38,10 @@ const int MIN_OBJECT_AREA = 20 * 20;
 const int MAX_OBJECT_AREA = FRAME_HEIGHT*FRAME_WIDTH / 1.5;
 //names that will appear at the top of each window
 
+int sock = 0;
+
+float unghi1_anterior = 0.0;
+
 void on_trackbar(int, void*)
 {//This function gets called whenever a
  // trackbar position is changed
@@ -50,12 +57,12 @@ void createTrackbars() {
 	namedWindow("Trackbars", 0);
 	//create memory to store trackbar name on window
 	char TrackbarName[50];
-	sprintf(TrackbarName, "H_MIN", H_MIN);
-	sprintf(TrackbarName, "H_MAX", H_MAX);
-	sprintf(TrackbarName, "S_MIN", S_MIN);
-	sprintf(TrackbarName, "S_MAX", S_MAX);
-	sprintf(TrackbarName, "V_MIN", V_MIN);
-	sprintf(TrackbarName, "V_MAX", V_MAX);
+	sprintf(TrackbarName, "H_MIN");
+	sprintf(TrackbarName, "H_MAX");
+	sprintf(TrackbarName, "S_MIN");
+	sprintf(TrackbarName, "S_MAX");
+	sprintf(TrackbarName, "V_MIN");
+	sprintf(TrackbarName, "V_MAX");
 	//create trackbars and insert them into window
 	//3 parameters are: the address of the variable that is changing when the trackbar is moved(eg.H_LOW),
 	//the max value the trackbar can move (eg. H_HIGH),
@@ -103,7 +110,8 @@ void morphOps(Mat &thresh) {
 	dilate(thresh, thresh, dilateElement);
 
 }
-void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
+
+bool trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 	//*!!!!!!de scos
 	Mat temp;
 	threshold.copyTo(temp);
@@ -149,18 +157,21 @@ void trackFilteredObject(int &x, int &y, Mat threshold, Mat &cameraFeed) {
 				drawObject(x, y, cameraFeed);
 
 			}
+			return objectFound;
 		}
-		else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
+		//else putText(cameraFeed, "TOO MUCH NOISE! ADJUST FILTER", Point(0, 50), 1, 2, Scalar(0, 0, 255), 2);
 	}
+	return false;
 }
-int connect()
-{
+
+int connect(){
     struct sockaddr_in address;
-    int sock = 0, valread;
+    int valread;
     struct sockaddr_in serv_addr;
+
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        printf("\n Socket creation error \n");
+        printf("Socket creation error\n");
         return -1;
     }
   
@@ -172,16 +183,17 @@ int connect()
     // Convert IPv4 and IPv6 addresses from text to binary form
     if(inet_pton(AF_INET, "193.226.12.217", &serv_addr.sin_addr)<=0) 
     {
-        printf("\nInvalid address/ Address not supported \n");
+        printf("Invalid address/ Address not supported \n");
         return -1;
     }
   
     if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-        printf("\nConnection Failed \n");
+        printf("Connection Failed\n");
         return -1;
     }
-    return sock;
+
+    return 0;
 }
 
 float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, float y, float eroare){
@@ -191,8 +203,12 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 
 	float unghi1, unghi2, unghi;
 
-	if (yOld - eroare <= yNew && yNew <= yOld + eroare){
-		// miscare pe verticala
+	if (yOld - eroare <= yNew && yNew <= yOld + eroare && xOld - eroare <= xNew && xNew <= xOld + eroare){
+		// robotul nostru nu s-a miscat
+		// consider ca unghiul este unghiul de la pasul anterior
+		unghi1 = unghi1_anterior;
+	} else if (yOld - eroare <= yNew && yNew <= yOld + eroare){
+		// miscare pe verticala (traiectoria robotului nostru)
 		if (xOld < xNew){
 			unghi1 = 270.0;
 		}
@@ -201,7 +217,7 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 		}
 	}
 	else if (xOld - eroare <= xNew && xNew <= xOld + eroare){
-		// miscare pe orizontala
+		// miscare pe orizontala (traiectoria robotului nostru)
 		if (yOld < yNew){
 			unghi1 = 0.0;
 		}
@@ -210,9 +226,11 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 		}
 	}
 	else{
-		// miscare oblica
+		// miscare oblica (traiectoria robotului nostru)
 		unghi1 = atan2(yNew - yOld, xOld - xNew) / PI * 180.0;
 	}
+
+	unghi1_anterior = unghi1;
 
 	if (yNew - eroare <= y && y <= yNew + eroare){
 		// miscare pe verticala
@@ -239,6 +257,8 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 
 	// DE STERS DUPA TESTARE !!!
 	printf("unghi_1 = %f ; unghi_2 = %f\n", unghi1, unghi2);
+	// END DE STERS DUPA TESTARE !!!
+
 	unghi =  unghi2 - unghi1;
 	if (unghi < -180.0){
 		return unghi + 360.0;
@@ -249,112 +269,282 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 	return unghi;
 }
 
-void directie(char dir, float unghi){
-	if (dir == 'l'){
-		//viraj stanga apoi fata
-		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi,unghi*TIMProtirepentru1grad);
-	}
-	if (dir == 'r'){
-		//viraj dreapta apoi fata
-		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi,(unghi*TIMProtirepentru360)/360);
-	}
-	if (dir == 'x'){
-		// apoi se misca in fata x ms
-		printf("Se deplaseaza in fata\n\n");
-	}
-}
 //functia care comanda deplasare pt un anumit timp
-void move(char string[],float delay){
-	char cmd[2];
-	for(int i = 0; i < strlen(string); ++i){
-		if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
-			continue;
-		else{
-			sprintf(cmd, "%c", string[i]);
-			send(sock , cmd, strlen(cmd), 0 );
-			sleep(delay);
-		}
+// void move(char string[], float delay){
+// 	char cmd[2];
+// 	for(int i = 0; i < strlen(string); ++i){
+// 		if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
+// 			continue;
+// 		else{
+// 			sprintf(cmd, "%c", string[i]);
+// 			send(sock , cmd, strlen(cmd), 0 );
+// 			sleep(delay);
+// 		}
+// 	}
+// }
+
+void move(char dir, float unghi){
+	if (dir == 'l'){
+		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi, unghi * TIMProtirepentru1grad);
 	}
+	else if (dir == 'r'){
+		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi, (unghi * TIMProtirepentru360) / 360);
+	}
+
+	// apoi se misca in fata x ms
+	printf("Se deplaseaza in fata\n\n");
 }
-int main(int argc, char* argv[])
-{
-	//some boolean variables for different functionality within this
-	//program
+
+int main(int argc, char* argv[]){
+
+	// robotul nostru - ROZ
+	int H_MIN_1 = 95;
+	int H_MAX_1 = 256;
+	int S_MIN_1 = 1;
+	int S_MAX_1 = 256;
+	int V_MIN_1 = 172;
+	int V_MAX_1 = 256;
+
+	// robotul adversar - PORTOCALIU
+	int H_MIN_2 = 0;
+	int H_MAX_2 = 91;
+	int S_MIN_2 = 79;
+	int S_MAX_2 = 256;
+	int V_MIN_2 = 223;
+	int V_MAX_2 = 256;
+
 	bool trackObjects = true;
 	bool useMorphOps = true;
-	//Point p;
-	//Matrix to store each frame of the webcam feed
+
+	int eroare = 20.0;
+	float deviere = 10.0;
+
+	float unghi;
+
 	Mat cameraFeed;
-	//matrix storage for HSV image
 	Mat HSV;
-	//matrix storage for binary threshold image
 	Mat threshold;
+
 	//x and y values for the location of the object
 	int x = 0, y = 0;
-	int xeu=0,yeu= 0;
-	int xOld=0,yOld=0;
+
+	int xNew, yNew; // ultimele coordonate ale robotului nostru
+	int xOld, yOld; // penultimele coordonate ale robotului nostru
+	int xAdv, yAdv; // ultimele coordonate ale adversarului
+
+	// coordonate temporare
+	int tmp_xOld, tmp_yOld, tmp_xNew, tmp_yNew;
+
 	//create slider bars for HSV filtering
-	createTrackbars();
+	//createTrackbars();
 	//video capture object to acquire webcam feed
 	VideoCapture capture;
 
 	//open capture object at location zero (default location for webcam)
-	capture.open("rtmp://172.16.254.99/live/nimic");
+	//capture.open("rtmp://172.16.254.99/live/nimic");
 	// open the default camera, use something different from 0 otherwise;
     if(!capture.open(0))
         return 0;
+
 	//set height and width of capture frame
 	//capture.set(CV_CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
 	//capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
-	//start an infinite loop where webcam feed is copied to cameraFeed matrix
-	//all of our operations will be performed within this loop
-	connect();
-	while (1) {
-		//store image to matrix
+
+    // conectarea la socket
+    while(true){
+    	if(connect() == 0){
+    		// conectare reusita
+    		break;
+    	}
+    	sleep(1);
+    }
+
+	printf("Robotul este pregatit pentru competitie. Apasa orice tasta pentru a incepe\n");
+	getchar();
+
+	// Determin coordonatele initiale ale robotului nostru
+	while(true){
 		capture.read(cameraFeed);
 		if(!cameraFeed.empty()){
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-			//filter HSV image between values and store filtered image to
-			//threshold matrix
-			
-			//168 256 60 256 70 256 ROZ
-			//0 91 79 256 223 256 GALBEN
 
-			inRange(HSV, Scalar(H_MIN, S_MIN, V_MIN), Scalar(H_MAX, S_MAX, V_MAX), threshold);
-			//perform morphological operations on thresholded image to eliminate noise
-			//and emphasize the filtered object(s)
-			if (useMorphOps)
+
+			/* ********************* ROBOTUL NOSTRU ************************* */
+			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
+
+			if (useMorphOps){
 				morphOps(threshold);
-			//pass in thresholded frame to our object tracking function
-			//this function will return the x and y coordinates of the
-			//filtered object
-			if (trackObjects){
-				trackFilteredObject(x, y, threshold, cameraFeed);
+				//printf("[1] %d %d\n", x, y);
 			}
-			//x si y coordonatele
-			xeu=x;
-			yeu=y;
-			inRange(HSV, Scalar(0, 79, 223), Scalar(91, S_MAX, V_MAX), threshold);
-			if (useMorphOps)
-				morphOps(threshold);
+
 			if (trackObjects){
-				trackFilteredObject(x, y, threshold, cameraFeed);
+				if(trackFilteredObject(x, y, threshold, cameraFeed)){
+					imshow("FEED", cameraFeed);
+					waitKey(30);
+					xOld = x;
+					yOld = y;
+					break;
+				}
 			}
-			calculeazaUnghi(xOld,yOld,xeu,yeu,x,y,eroare);
-			//show frames
-			imshow("threshold", threshold);
 			imshow("FEED", cameraFeed);
-			//imshow(windowName1, HSV);
-			//delay 30ms so that screen can refresh.
-			//image will not appear without this waitKey() command
 			waitKey(30);
-			xOld=xeu;
-			yOld=yeu;
 		}
 	}
 
-	//move(argv[1]);
-	return 0;
-}
+	// il mut putin in fata pentru a afla directia
+	printf("forward, wait(?), stop\n");
+	getchar();
 
+	// detectez noua pozitie a robotului, dupa care detectez directia lui (unghi1_anterior)
+	while(true){
+		capture.read(cameraFeed);
+		if(!cameraFeed.empty()){
+			//convert frame from BGR to HSV colorspace
+			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+
+
+			/* ********************* ROBOTUL NOSTRU ************************* */
+			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
+
+			if (useMorphOps){
+				morphOps(threshold);
+				//printf("[1] %d %d\n", x, y);
+			}
+
+			if (trackObjects){
+				if(trackFilteredObject(x, y, threshold, cameraFeed)){
+					xNew = x;
+					yNew = y;
+
+					imshow("FEED", cameraFeed);
+					waitKey(30);
+
+					// determin unghiul cu care s-a miscat robotul
+
+					if (yOld - eroare <= yNew && yNew <= yOld + eroare && xOld - eroare <= xNew && xNew <= xOld + eroare){
+						// robotul nostru nu s-a miscat - consider ca a avut suficienta baterie ca sa se miste, dar camera inca nu a detectat miscarea
+						continue;
+					} else if (yOld - eroare <= yNew && yNew <= yOld + eroare){
+						// miscare pe verticala (traiectoria robotului nostru)
+						if (xOld < xNew){
+							unghi1_anterior = 270.0;
+						}
+						else{
+							unghi1_anterior = 90.0;
+						}
+					}
+					else if (xOld - eroare <= xNew && xNew <= xOld + eroare){
+						// miscare pe orizontala (traiectoria robotului nostru)
+						if (yOld < yNew){
+							unghi1_anterior = 0.0;
+						}
+						else{
+							unghi1_anterior = 180.0;
+						}
+					}
+					else{
+						// miscare oblica (traiectoria robotului nostru)
+						unghi1_anterior = atan2(yNew - yOld, xOld - xNew) / PI * 180.0;
+					} // OBSERVSATIE! E imposibil ca robotul sa stea pe loc, pentru ca ii dau un 'forward'
+
+					break;
+				}
+			}
+
+			imshow("FEED", cameraFeed);
+			waitKey(30);
+		}
+	}
+
+	printf("Directie detectata\n");
+	printf("Unghi = %f\n", unghi1_anterior);
+
+	while(cameraFeed.empty());
+	inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
+
+	while (1) {
+		//store image to matrix
+		capture.read(cameraFeed);
+
+		if(!cameraFeed.empty()){
+			//convert frame from BGR to HSV colorspace
+			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
+
+
+			/* ********************* ROBOTUL NOSTRU ************************* */
+			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
+
+			if (useMorphOps){
+				morphOps(threshold);
+				//printf("[1] %d %d\n", x, y);
+			}
+
+			if (trackObjects){
+				if(!trackFilteredObject(x, y, threshold, cameraFeed)){
+					//imshow("FEED", cameraFeed);
+					waitKey(30);
+					continue;
+				}
+
+				// s-a detectat culoarea, deci actualizez coordonatele
+				// actualizez doar temporar coordonatele, pentru ca acestea trebuie actualizate doar atunci cand si adversarul a fost detectat
+				tmp_xOld = xNew;
+				tmp_yOld = yNew;
+				tmp_xNew = x;
+				tmp_yNew = y;
+			}
+
+			/* ********************* ROBOTUL ADVERSAR ************************ */
+			inRange(HSV, Scalar(H_MIN_2, S_MIN_2, V_MIN_2), Scalar(H_MAX_2, S_MAX_2, V_MAX_2), threshold);
+
+			if (useMorphOps){
+				morphOps(threshold);
+			}
+	
+			if (trackObjects){
+				if(!trackFilteredObject(x, y, threshold, cameraFeed)){
+					//imshow("FEED", cameraFeed);
+					waitKey(30);
+					continue;
+				}
+
+				// s-a detectat culoarea, deci actualizez coordonatele
+				xAdv = x;
+				yAdv = y;
+
+				xOld = tmp_xOld;
+				yOld = tmp_yOld;
+				xNew = tmp_xNew;
+				yNew = tmp_yNew;
+			}
+	
+			//show frames
+			//imshow("threshold", threshold);
+			imshow("FEED", cameraFeed);
+			//imshow(windowName1, HSV);
+
+			// ca sa nu facem atat de multe miscari de rotatie (pentru ca nu putem obtine miscari
+			// fine de rotatie) putem sa verificam daca eroarea traiectoriei noastre  este mai 
+			// mica decat o EROARE MAXIMA (variabila deviere:float)
+	
+			unghi = calculeazaUnghi(xOld, yOld, xNew, yNew, xAdv, yAdv, eroare);
+
+			if (unghi < -deviere){
+				move('l', -unghi); // left
+			}
+			else if (unghi > deviere){
+				move('r', unghi); // right
+			}
+			else{
+				move('x', unghi);
+			}
+
+			//delay 30ms so that screen can refresh.
+			//image will not appear without this waitKey() command
+			waitKey(30); // de ales intarzierea potrivita pentru a detecta corect pozitia !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+		}
+	}
+
+	return -1;
+}
