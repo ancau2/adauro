@@ -15,7 +15,7 @@
 #define PI 3.1415
 #define PORT 20232
 #define TIMProtirepentru360 2.25
-#define UnDelayLaNimereala 0.75
+#define UnDelayLaNimereala 750000
 using namespace std;
 using namespace cv;
 
@@ -278,13 +278,14 @@ void move(char string[], float unghi){
 		else{
 			sprintf(cmd, "%c", string[i]);
 			send(sock , cmd, strlen(cmd), 0 );
-			if(string[i]!='s'){
-				if(string[i]=='l'||string[i]=='r'){
-					sleep(UnDelayLaNimereala*TIMProtirepentru1grad*unghi);
-				}
-				else{
-					sleep(UnDelayLaNimereala);
-				}
+			if(string[i]=='l'||string[i]=='r'){
+				usleep(UnDelayLaNimereala*TIMProtirepentru1grad*unghi);
+			}
+			if(string[i]=='s'){
+				continue;
+			}
+			else{
+				usleep(UnDelayLaNimereala);
 			}
 		}
 	}
@@ -363,7 +364,7 @@ int main(int argc, char* argv[]){
     		// conectare reusita
     		break;
     	}
-    	sleep(1);
+    	usleep(10000);
     }
 
 	printf("Robotul este pregatit pentru competitie. Apasa orice tasta pentru a incepe\n");
@@ -401,7 +402,7 @@ int main(int argc, char* argv[]){
 
 	// il mut putin in fata pentru a afla directia
 	//printf("forward, wait(?), stop\n");
-	
+	move("fx",1);
 	getchar();
 
 	// detectez noua pozitie a robotului, dupa care detectez directia lui (unghi1_anterior)
@@ -539,13 +540,13 @@ int main(int argc, char* argv[]){
 			unghi = calculeazaUnghi(xOld, yOld, xNew, yNew, xAdv, yAdv, eroare);
 
 			if (unghi < -deviere){
-				move("lfs", -unghi); // left
+				move("lf", -unghi); // left
 			}
 			else if (unghi > deviere){
-				move("rfs", unghi); // right
+				move("rf", unghi); // right
 			}
 			else{
-				move("fs", unghi);
+				move("fx", unghi);
 			}
 
 			//delay 30ms so that screen can refresh.
