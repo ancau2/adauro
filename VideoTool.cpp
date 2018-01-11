@@ -15,7 +15,7 @@
 #define PI 3.1415
 #define PORT 20232
 #define TIMProtirepentru360 2.25
-
+#define UnDelayLaNimereala 0.75
 using namespace std;
 using namespace cv;
 
@@ -270,30 +270,37 @@ float calculeazaUnghi(float xOld, float yOld, float xNew, float yNew, float x, f
 }
 
 //functia care comanda deplasare pt un anumit timp
-// void move(char string[], float delay){
-// 	char cmd[2];
-// 	for(int i = 0; i < strlen(string); ++i){
-// 		if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
-// 			continue;
-// 		else{
-// 			sprintf(cmd, "%c", string[i]);
-// 			send(sock , cmd, strlen(cmd), 0 );
-// 			sleep(delay);
-// 		}
-// 	}
-// }
-
-void move(char dir, float unghi){
-	if (dir == 'l'){
-		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi, unghi * TIMProtirepentru1grad);
+void move(char string[], float unghi){
+	char cmd[2];
+	for(int i = 0; i < strlen(string); ++i){
+		if(string[i] != 'f' && string[i] != 'b' && string[i] != 'r' && string[i] != 'l' && string[i] != 's')
+			continue;
+		else{
+			sprintf(cmd, "%c", string[i]);
+			send(sock , cmd, strlen(cmd), 0 );
+			if(string[i]!='s'){
+				if(string[i]=='l'||string[i]=='r'){
+					sleep(UnDelayLaNimereala*TIMProtirepentru1grad*unghi);
+				}
+				else{
+					sleep(UnDelayLaNimereala);
+				}
+			}
+		}
 	}
-	else if (dir == 'r'){
-		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi, (unghi * TIMProtirepentru360) / 360);
-	}
-
-	// apoi se misca in fata x ms
-	printf("Se deplaseaza in fata\n\n");
 }
+
+// void move(char dir, float unghi){
+// 	if (dir == 'l'){
+// 		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi, unghi * TIMProtirepentru1grad);
+// 	}
+// 	else if (dir == 'r'){
+// 		printf("Se roteste la dreapta cu %f grade timpe de %f\n", unghi, (unghi * TIMProtirepentru360) / 360);
+// 	}
+
+// 	// apoi se misca in fata x ms
+// 	printf("Se deplaseaza in fata\n\n");
+// }
 
 int main(int argc, char* argv[]){
 
@@ -393,7 +400,8 @@ int main(int argc, char* argv[]){
 	}
 
 	// il mut putin in fata pentru a afla directia
-	printf("forward, wait(?), stop\n");
+	//printf("forward, wait(?), stop\n");
+	
 	getchar();
 
 	// detectez noua pozitie a robotului, dupa care detectez directia lui (unghi1_anterior)
@@ -531,13 +539,13 @@ int main(int argc, char* argv[]){
 			unghi = calculeazaUnghi(xOld, yOld, xNew, yNew, xAdv, yAdv, eroare);
 
 			if (unghi < -deviere){
-				move('l', -unghi); // left
+				move("lfs", -unghi); // left
 			}
 			else if (unghi > deviere){
-				move('r', unghi); // right
+				move("rfs", unghi); // right
 			}
 			else{
-				move('x', unghi);
+				move("fs", unghi);
 			}
 
 			//delay 30ms so that screen can refresh.
