@@ -15,7 +15,7 @@
 #define PI 3.1415
 #define PORT 20232
 #define TIMProtirepentru360 2.25
-#define UnDelayLaNimereala 750000
+#define UnDelayLaNimereala 500000
 using namespace std;
 using namespace cv;
 
@@ -277,6 +277,7 @@ void move(char string[], float unghi){
 			continue;
 		else{
 			sprintf(cmd, "%c", string[i]);
+			printf("%s\n",cmd);
 			send(sock , cmd, strlen(cmd), 0 );
 			if(string[i]=='l'||string[i]=='r'){
 				usleep(UnDelayLaNimereala*TIMProtirepentru1grad*unghi);
@@ -291,7 +292,7 @@ void move(char string[], float unghi){
 	}
 }
 
-// void move(char dir, float unghi){
+/* void move(char dir, float unghi){
 // 	if (dir == 'l'){
 // 		printf("Se roteste la stanga cu %f grade timp de %f\n", unghi, unghi * TIMProtirepentru1grad);
 // 	}
@@ -301,30 +302,29 @@ void move(char string[], float unghi){
 
 // 	// apoi se misca in fata x ms
 // 	printf("Se deplaseaza in fata\n\n");
-// }
-
+//  }
+*/
 int main(int argc, char* argv[]){
 
-	// robotul nostru - ROZ
-	int H_MIN_1 = 95;
-	int H_MAX_1 = 256;
-	int S_MIN_1 = 1;
-	int S_MAX_1 = 256;
-	int V_MIN_1 = 172;
-	int V_MAX_1 = 256;
-
-	// robotul adversar - PORTOCALIU
-	int H_MIN_2 = 0;
-	int H_MAX_2 = 91;
-	int S_MIN_2 = 79;
+	// robotul nostru - albastru
+	int H_MIN_2 = 1;
+	int H_MAX_2 = 256;
+	int S_MIN_2 = 235;
 	int S_MAX_2 = 256;
-	int V_MIN_2 = 223;
+	int V_MIN_2 = 33;
 	int V_MAX_2 = 256;
-
+	
+	// robotul adversar - rosu
+	int H_MIN_1 = 136;
+	int H_MAX_1 = 256;
+	int S_MIN_1 = 198;
+	int S_MAX_1 = 256;
+	int V_MIN_1 = 1;
+	int V_MAX_1 = 256;
 	bool trackObjects = true;
 	bool useMorphOps = true;
 
-	int eroare = 20.0;
+	int eroare = 0.0;
 	float deviere = 10.0;
 
 	float unghi;
@@ -359,26 +359,22 @@ int main(int argc, char* argv[]){
 	//capture.set(CV_CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
 
     // conectarea la socket
-    while(true){
-    	if(connect() == 0){
-    		// conectare reusita
-    		break;
-    	}
-    	usleep(10000);
-    }
+    if(connect()!=0){printf("nu se poate connecta la socket\n");
+		return 0;
+	}
 
 	printf("Robotul este pregatit pentru competitie. Apasa orice tasta pentru a incepe\n");
 	getchar();
-
+	createTrackbars();
 	// Determin coordonatele initiale ale robotului nostru
+	
 	while(true){
 		capture.read(cameraFeed);
 		if(!cameraFeed.empty()){
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-
-
-			/* ********************* ROBOTUL NOSTRU ************************* */
+			printf("[1]");
+			/********************** ROBOTUL NOSTRU **************************/
 			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
 
 			if (useMorphOps){
@@ -390,29 +386,27 @@ int main(int argc, char* argv[]){
 				if(trackFilteredObject(x, y, threshold, cameraFeed)){
 					imshow("FEED", cameraFeed);
 					waitKey(30);
+					//waitKey(30);
 					xOld = x;
 					yOld = y;
 					break;
 				}
 			}
-			imshow("FEED", cameraFeed);
-			waitKey(30);
+			
 		}
 	}
 
 	// il mut putin in fata pentru a afla directia
 	//printf("forward, wait(?), stop\n");
 	move("fx",1);
-	getchar();
 
 	// detectez noua pozitie a robotului, dupa care detectez directia lui (unghi1_anterior)
 	while(true){
 		capture.read(cameraFeed);
 		if(!cameraFeed.empty()){
+			printf("[2]");
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-
-
 			/* ********************* ROBOTUL NOSTRU ************************* */
 			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
 
@@ -425,9 +419,10 @@ int main(int argc, char* argv[]){
 				if(trackFilteredObject(x, y, threshold, cameraFeed)){
 					xNew = x;
 					yNew = y;
-
 					imshow("FEED", cameraFeed);
 					waitKey(30);
+					//imshow("FEED", cameraFeed);
+					//waitKey(30);
 
 					// determin unghiul cu care s-a miscat robotul
 
@@ -461,14 +456,13 @@ int main(int argc, char* argv[]){
 				}
 			}
 
-			imshow("FEED", cameraFeed);
-			waitKey(30);
+			//imshow("FEED", cameraFeed);
+			//waitKey(30);
 		}
 	}
 
 	printf("Directie detectata\n");
 	printf("Unghi = %f\n", unghi1_anterior);
-
 	while(cameraFeed.empty());
 	inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
 
@@ -477,10 +471,10 @@ int main(int argc, char* argv[]){
 		capture.read(cameraFeed);
 
 		if(!cameraFeed.empty()){
+			
 			//convert frame from BGR to HSV colorspace
 			cvtColor(cameraFeed, HSV, COLOR_BGR2HSV);
-
-
+			
 			/* ********************* ROBOTUL NOSTRU ************************* */
 			inRange(HSV, Scalar(H_MIN_1, S_MIN_1, V_MIN_1), Scalar(H_MAX_1, S_MAX_1, V_MAX_1), threshold);
 
@@ -491,8 +485,6 @@ int main(int argc, char* argv[]){
 
 			if (trackObjects){
 				if(!trackFilteredObject(x, y, threshold, cameraFeed)){
-					//imshow("FEED", cameraFeed);
-					waitKey(30);
 					continue;
 				}
 
@@ -503,7 +495,7 @@ int main(int argc, char* argv[]){
 				tmp_xNew = x;
 				tmp_yNew = y;
 			}
-
+					
 			/* ********************* ROBOTUL ADVERSAR ************************ */
 			inRange(HSV, Scalar(H_MIN_2, S_MIN_2, V_MIN_2), Scalar(H_MAX_2, S_MAX_2, V_MAX_2), threshold);
 
@@ -513,7 +505,7 @@ int main(int argc, char* argv[]){
 	
 			if (trackObjects){
 				if(!trackFilteredObject(x, y, threshold, cameraFeed)){
-					//imshow("FEED", cameraFeed);
+					imshow("FEED", cameraFeed);
 					waitKey(30);
 					continue;
 				}
@@ -527,10 +519,12 @@ int main(int argc, char* argv[]){
 				xNew = tmp_xNew;
 				yNew = tmp_yNew;
 			}
-	
+			imshow("FEED", cameraFeed);
+			waitKey(30);
+			
 			//show frames
 			//imshow("threshold", threshold);
-			imshow("FEED", cameraFeed);
+			//imshow("FEED", cameraFeed);
 			//imshow(windowName1, HSV);
 
 			// ca sa nu facem atat de multe miscari de rotatie (pentru ca nu putem obtine miscari
@@ -551,9 +545,9 @@ int main(int argc, char* argv[]){
 
 			//delay 30ms so that screen can refresh.
 			//image will not appear without this waitKey() command
-			waitKey(30); // de ales intarzierea potrivita pentru a detecta corect pozitia !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+			 // de ales intarzierea potrivita pentru a detecta corect pozitia!
+		
 		}
 	}
-
 	return -1;
 }
